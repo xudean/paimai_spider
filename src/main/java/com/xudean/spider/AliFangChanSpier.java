@@ -31,6 +31,10 @@ public class AliFangChanSpier {
     private static final String DONG_GUAN_FANGCHAN_URL_PREFIX = "https://sf.taobao.com/item_list.htm?spm=a213w.7398504.pagination.2.63f56888yZmS5j&category=50025969&auction_source=0&city=%B6%AB%DD%B8&st_param=-1&auction_start_seg=-1&page=";
     private static final String DONG_GUAN_FANGCHAN_URL_INDEX = "https://sf.taobao.com/item_list.htm?spm=a213w.7398504.pagination.2.63f56888yZmS5j&category=50025969&auction_source=0&city=%B6%AB%DD%B8&st_param=-1&auction_start_seg=-1&page=1";
     private List<HouseItem> allHouse;
+    /**
+     * 爬取的条数
+     */
+    private int index  = 1;
 
     public AliFangChanSpier() {
         this.allHouse = new ArrayList<>();
@@ -47,7 +51,7 @@ public class AliFangChanSpier {
 //                        .sheet().doWrite(allHouse);
 //                return;
 //            }
-            log.info("当前爬取页数:第{}页", i);
+            log.info("=============当前爬取页数:第{}页==================", i);
             //分别获取每页的房产信息
             String nextUrl = getNextUrl(i);
             Document document = Jsoup.connect(nextUrl).timeout(5000).get();
@@ -62,13 +66,15 @@ public class AliFangChanSpier {
             Map<String, Object> itemsListMap = JSONUtil.toMap(data);
             ArrayList<Map<String, Object>> items = (ArrayList<Map<String, Object>>) itemsListMap.get("data");
             //循环获取每页的商品详情
-            int j = 0;//删掉
             for (Map<String, Object> item : items) {
                 Object itemUrl = item.get("itemUrl");
+                if(index ==162){
+                    System.out.println();
+                }
                 Document detailItem = Jsoup.connect("https:" + itemUrl).timeout(5000).get();
                 HouseItem houseItem = getItemDetailInfo(detailItem);
                 allHouse.add(houseItem);
-                j++;
+                log.info("----------已爬取{}条---------------",index++);
             }
 
         }
@@ -98,10 +104,14 @@ public class AliFangChanSpier {
         //开始时间
         Elements startDateEle = document.select("li[class=J_PItem]");
         String endTimestamp = startDateEle.attr("data-end");
-        Date date = new Date(Long.valueOf(endTimestamp));
-        String endDataFormat = DateUtil.formatDate(date);
-        houseItem.setStartDate(endDataFormat);
-
+        Date date = new Date();
+        if(StringUtils.isEmpty(endTimestamp)){
+            houseItem.setStartDate("为获取到具体时间,请到详情页面查看");
+        }else{
+            date = new Date(Long.valueOf(endTimestamp));
+            String endDataFormat = DateUtil.formatDate(date);
+            houseItem.setStartDate(endDataFormat);
+        }
         //处置单位
         String court = document.select("span[class=unit-txt unit-name item-announcement]").text();
         houseItem.setCourt(court);
@@ -227,6 +237,9 @@ public class AliFangChanSpier {
         Elements pngs = document.select("img[src$=.jpg]");
         for (Element element : pngs) {
             try {
+                if(StringUtils.isEmpty(element.attr("src"))){
+                    continue;
+                }
                 saveToImages("https:" + element.attr("src"), houseItem.getHouseAddress());
             } catch (IOException e) {
                 log.error("保存图片失败，图片地址:{}", houseItem.getHouseAddress());
@@ -269,7 +282,7 @@ public class AliFangChanSpier {
 
     public boolean downloadImg(InputStream inputStream, String path) {
         boolean flag = true;
-        File file = new File(path);
+        File file = new File(path.replace("?","").replace("!",""));
         File fileParent = file.getParentFile();
         if (!fileParent.exists()) {
             fileParent.mkdirs();//创建路径
