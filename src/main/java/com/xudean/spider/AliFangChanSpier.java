@@ -5,6 +5,7 @@ import com.alibaba.excel.EasyExcel;
 import com.xudean.pojo.HouseItem;
 import com.xudean.util.DateUtil;
 import com.xudean.util.JSONUtil;
+import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.io.FileUtils;
 import org.jsoup.Jsoup;
@@ -18,6 +19,10 @@ import java.io.*;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.util.*;
+import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * @author xuda
@@ -31,52 +36,22 @@ public class AliFangChanSpier {
     private static final String DONG_GUAN_FANGCHAN_URL_PREFIX = "https://sf.taobao.com/item_list.htm?spm=a213w.7398504.pagination.2.63f56888yZmS5j&category=50025969&auction_source=0&city=%B6%AB%DD%B8&st_param=-1&auction_start_seg=-1&page=";
     private static final String DONG_GUAN_FANGCHAN_URL_INDEX = "https://sf.taobao.com/item_list.htm?spm=a213w.7398504.pagination.2.63f56888yZmS5j&category=50025969&auction_source=0&city=%B6%AB%DD%B8&st_param=-1&auction_start_seg=-1&page=1";
     private List<HouseItem> allHouse;
+    private ExecutorService  cachedThreadPool ;;
     /**
      * 爬取的条数
      */
-    private int index  = 1;
+    private AtomicInteger index=new AtomicInteger(1);
 
     public AliFangChanSpier() {
-        this.allHouse = new ArrayList<>();
+        this.allHouse = new CopyOnWriteArrayList<>();
+        this.cachedThreadPool =  Executors.newFixedThreadPool(8);
     }
 
     public void startSpider() throws IOException {
         Integer totalPage = getStartPageAndEndPage();
         log.info("获取到总页数:{}", totalPage);
         for (int i = 1; i <= totalPage; i++) {
-            //todo 删掉
-//            if (i == 2) {
-//                //保存Excel
-//                EasyExcel.write("files/淘宝-东莞住宅用房拍卖-司法拍卖-阿里拍卖_拍卖房产汽车车牌土地海关罚没等.xlsx", HouseItem.class)
-//                        .sheet().doWrite(allHouse);
-//                return;
-//            }
-            log.info("=============当前爬取页数:第{}页==================", i);
-            //分别获取每页的房产信息
-            String nextUrl = getNextUrl(i);
-            Document document = Jsoup.connect(nextUrl).timeout(5000).get();
-            String oriData = document.getElementById("sf-item-list-data").toString();
-            //接下来对数据进行处理
-            //1.找到“>”标签的位置
-            int start = oriData.indexOf(">");
-            //2.找到"</"标签的位置
-            int end = oriData.indexOf("</");
-            //截取出值
-            String data = oriData.substring(start + 1, end);
-            Map<String, Object> itemsListMap = JSONUtil.toMap(data);
-            ArrayList<Map<String, Object>> items = (ArrayList<Map<String, Object>>) itemsListMap.get("data");
-            //循环获取每页的商品详情
-            for (Map<String, Object> item : items) {
-                Object itemUrl = item.get("itemUrl");
-                if(index ==162){
-                    System.out.println();
-                }
-                Document detailItem = Jsoup.connect("https:" + itemUrl).timeout(5000).get();
-                HouseItem houseItem = getItemDetailInfo(detailItem);
-                allHouse.add(houseItem);
-                log.info("----------已爬取{}条---------------",index++);
-            }
-
+            getEveryPageHouseItem(i);
         }
         //保存Excel
         EasyExcel.write("files/淘宝-东莞住宅用房拍卖-司法拍卖-阿里拍卖_拍卖房产汽车车牌土地海关罚没等.xlsx", HouseItem.class)
@@ -84,6 +59,40 @@ public class AliFangChanSpier {
     }
 
 
+    private void getEveryPageHouseItem(int page) throws IOException {
+        log.info("=============当前爬取页数:第{}页==================", page);
+        //分别获取每页的房产信息
+        String nextUrl = getNextUrl(page);
+        Document document = Jsoup.connect(nextUrl).timeout(5000).get();
+        String oriData = document.getElementById("sf-item-list-data").toString();
+        //接下来对数据进行处理
+        //1.找到“>”标签的位置
+        int start = oriData.indexOf(">");
+        //2.找到"</"标签的位置
+        int end = oriData.indexOf("</");
+        //截取出值
+        String data = oriData.substring(start + 1, end);
+        Map<String, Object> itemsListMap = JSONUtil.toMap(data);
+        ArrayList<Map<String, Object>> items = (ArrayList<Map<String, Object>>) itemsListMap.get("data");
+        //循环获取每页的商品详情
+        for (Map<String, Object> item : items) {
+            Object itemUrl = item.get("itemUrl");
+            Document detailItem = Jsoup.connect("https:" + itemUrl).timeout(5000).get();
+            //获取每页详情的时候可以交给线程池区爬取
+            cachedThreadPool.execute(new Runnable() {
+                @SneakyThrows
+                @Override
+                public void run() {
+                    HouseItem houseItem = getItemDetailInfo(detailItem);
+                    allHouse.add(houseItem);
+                    log.info("----------已爬取{}条---------------",index.incrementAndGet());
+                }
+            });
+
+
+        }
+
+    }
     /**
      * 解析具體的商品詳情
      */
@@ -282,7 +291,7 @@ public class AliFangChanSpier {
 
     public boolean downloadImg(InputStream inputStream, String path) {
         boolean flag = true;
-        File file = new File(path.replace("?","").replace("!",""));
+        File file = new File(path.replace("?","").replace("!","").replace("【","").replace("】",""));
         File fileParent = file.getParentFile();
         if (!fileParent.exists()) {
             fileParent.mkdirs();//创建路径
