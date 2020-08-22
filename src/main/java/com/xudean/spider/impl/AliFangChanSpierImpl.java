@@ -1,8 +1,9 @@
-package com.xudean.spider;
+package com.xudean.spider.impl;
 
 import cn.hutool.core.util.StrUtil;
 import com.alibaba.excel.EasyExcel;
 import com.xudean.pojo.HouseItem;
+import com.xudean.spider.ISpider;
 import com.xudean.util.DateUtil;
 import com.xudean.util.JSONUtil;
 import lombok.SneakyThrows;
@@ -19,9 +20,7 @@ import java.io.*;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.util.*;
-import java.util.concurrent.CopyOnWriteArrayList;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
+import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
@@ -29,34 +28,54 @@ import java.util.concurrent.atomic.AtomicInteger;
  */
 @Slf4j
 @Component
-public class AliFangChanSpier {
+public class AliFangChanSpierImpl implements ISpider {
     /**
      * 东莞房产初始URL
      */
     private static final String DONG_GUAN_FANGCHAN_URL_PREFIX = "https://sf.taobao.com/item_list.htm?spm=a213w.7398504.pagination.2.63f56888yZmS5j&category=50025969&auction_source=0&city=%B6%AB%DD%B8&st_param=-1&auction_start_seg=-1&page=";
     private static final String DONG_GUAN_FANGCHAN_URL_INDEX = "https://sf.taobao.com/item_list.htm?spm=a213w.7398504.pagination.2.63f56888yZmS5j&category=50025969&auction_source=0&city=%B6%AB%DD%B8&st_param=-1&auction_start_seg=-1&page=1";
     private List<HouseItem> allHouse;
-    private ExecutorService  cachedThreadPool ;;
+    private ExecutorService cachedThreadPool;
+    private static CountDownLatch cdl = new CountDownLatch(8);
+    ;
     /**
      * 爬取的条数
      */
-    private AtomicInteger index=new AtomicInteger(1);
+    private AtomicInteger index = new AtomicInteger(1);
 
-    public AliFangChanSpier() {
+    public AliFangChanSpierImpl() {
         this.allHouse = new CopyOnWriteArrayList<>();
-        this.cachedThreadPool =  Executors.newFixedThreadPool(8);
+        this.cachedThreadPool = Executors.newFixedThreadPool(8);
     }
 
+    @Override
     public void startSpider() throws IOException {
         Integer totalPage = getStartPageAndEndPage();
         log.info("获取到总页数:{}", totalPage);
         for (int i = 1; i <= totalPage; i++) {
             getEveryPageHouseItem(i);
         }
+        while (true) {
+            if (((ThreadPoolExecutor) cachedThreadPool).getActiveCount()==0) {
+                log.info("淘宝-所有线程执行完毕，开始保存文件");
+                break;
+            }
+            try {
+                //等待三秒再检查
+                Thread.sleep(3000);
+            } catch (Exception e) {
+
+            }
+        }
         //保存Excel
         EasyExcel.write("files/淘宝-东莞住宅用房拍卖-司法拍卖-阿里拍卖_拍卖房产汽车车牌土地海关罚没等.xlsx", HouseItem.class)
                 .sheet().doWrite(allHouse);
+        log.info("保存文件成功！");
+        cachedThreadPool.shutdown();
+
     }
+
+
 
 
     private void getEveryPageHouseItem(int page) throws IOException {
@@ -85,7 +104,8 @@ public class AliFangChanSpier {
                 public void run() {
                     HouseItem houseItem = getItemDetailInfo(detailItem);
                     allHouse.add(houseItem);
-                    log.info("----------已爬取{}条---------------",index.incrementAndGet());
+                    log.info("----------已爬取{}条---------------", index.incrementAndGet());
+                    cdl.countDown();
                 }
             });
 
@@ -93,6 +113,7 @@ public class AliFangChanSpier {
         }
 
     }
+
     /**
      * 解析具體的商品詳情
      */
@@ -114,9 +135,9 @@ public class AliFangChanSpier {
         Elements startDateEle = document.select("li[class=J_PItem]");
         String endTimestamp = startDateEle.attr("data-end");
         Date date = new Date();
-        if(StringUtils.isEmpty(endTimestamp)){
+        if (StringUtils.isEmpty(endTimestamp)) {
             houseItem.setStartDate("为获取到具体时间,请到详情页面查看");
-        }else{
+        } else {
             date = new Date(Long.valueOf(endTimestamp));
             String endDataFormat = DateUtil.formatDate(date);
             houseItem.setStartDate(endDataFormat);
@@ -246,7 +267,7 @@ public class AliFangChanSpier {
         Elements pngs = document.select("img[src$=.jpg]");
         for (Element element : pngs) {
             try {
-                if(StringUtils.isEmpty(element.attr("src"))){
+                if (StringUtils.isEmpty(element.attr("src"))) {
                     continue;
                 }
                 saveToImages("https:" + element.attr("src"), houseItem.getHouseAddress());
@@ -275,7 +296,7 @@ public class AliFangChanSpier {
      * @param dirName
      * @return
      */
-    // 爬取网络的图片到本地
+// 爬取网络的图片到本地
     public String saveToAttachFile(String destUrl, String dirName, String filename) throws IOException {
         URL url = new URL(destUrl);
         HttpURLConnection httpUrl = (HttpURLConnection) url.openConnection();
@@ -291,7 +312,7 @@ public class AliFangChanSpier {
 
     public boolean downloadImg(InputStream inputStream, String path) {
         boolean flag = true;
-        File file = new File(path.replace("?","").replace("!","").replace("【","").replace("】",""));
+        File file = new File(path.replace("?", "").replace("!", "").replace("【", "").replace("】", ""));
         File fileParent = file.getParentFile();
         if (!fileParent.exists()) {
             fileParent.mkdirs();//创建路径
