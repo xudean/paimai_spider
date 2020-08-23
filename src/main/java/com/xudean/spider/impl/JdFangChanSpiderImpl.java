@@ -2,6 +2,7 @@ package com.xudean.spider.impl;
 
 import cn.hutool.core.util.StrUtil;
 import com.alibaba.excel.EasyExcel;
+import com.xudean.config.SpiderControlConfig;
 import com.xudean.pojo.HouseItem;
 import com.xudean.spider.ISpider;
 import com.xudean.util.DateUtil;
@@ -30,7 +31,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 /**
  * @author xuda
  */
-@Component
 @Slf4j
 public class JdFangChanSpiderImpl implements ISpider {
     private static final String DONG_GUAN_JD_INDEX_URL = "https://auction.jd.com/sifa_list.html?childrenCateId=12728";
@@ -53,15 +53,17 @@ public class JdFangChanSpiderImpl implements ISpider {
 
     private List<HouseItem> allHouse;
     private ExecutorService cachedThreadPool;
+    private String datePath;
 
     /**
      * 爬取的条数
      */
     private AtomicInteger index = new AtomicInteger(1);
 
-    public JdFangChanSpiderImpl() {
+    public JdFangChanSpiderImpl(int threadNums,String datePath) {
         this.allHouse = new CopyOnWriteArrayList<>();
-        this.cachedThreadPool = Executors.newFixedThreadPool(8);
+        this.cachedThreadPool = Executors.newFixedThreadPool(threadNums);
+        this.datePath = datePath;
     }
 
 
@@ -73,7 +75,7 @@ public class JdFangChanSpiderImpl implements ISpider {
         Integer totalPage = totalItem % pageSize == 0 ? (totalItem / pageSize) : (totalItem / pageSize + 1);
         for (int i = 1; i <= totalPage; i++) {
             log.info("===========当前爬取第{}页===========", i);
-            if (i == 3) {
+            if(i==2 && SpiderControlConfig.isDebug==true){
                 break;
             }
             List<Map<String, Object>> thisPageDataList = getDataListOfThisPage(i);
@@ -103,7 +105,7 @@ public class JdFangChanSpiderImpl implements ISpider {
             }
         }
         //保存Excel
-        EasyExcel.write("files/京东-东莞住宅用房拍卖-司法拍卖-阿里拍卖_拍卖房产汽车车牌土地海关罚没等.xlsx", HouseItem.class)
+        EasyExcel.write("files/"+datePath+"/京东-东莞住宅用房拍卖-司法拍卖-阿里拍卖_拍卖房产汽车车牌土地海关罚没等.xlsx", HouseItem.class)
                 .sheet().doWrite(allHouse);
         log.info("保存文件成功！");
         cachedThreadPool.shutdown();
@@ -163,7 +165,7 @@ public class JdFangChanSpiderImpl implements ISpider {
             if (text.contains("建筑面积") && text.contains("房产登记")) {
                 String area = StrUtil.subBetween(text, "建筑面积：", "平方米");
                 String no = StrUtil.subBetween(text, "房产登记号：", "号，");
-                houseItem.setAreaSize(area);
+                houseItem.setAreaSize(area.replace("△ ☆ ※","").replace("☆ ※ ",""));
                 houseItem.setCertificateNo(no);
                 break;
             }
@@ -283,9 +285,9 @@ public class JdFangChanSpiderImpl implements ISpider {
         httpUrl.connect();
         InputStream inputStream = httpUrl.getInputStream();
         //将图片保存成files/房产地址/xxx.jpg的形式
-        String filePath = "files/京东/" + dirName + "/images/" + UUID.randomUUID().toString() + ".jpg";
+        String filePath = "files/"+datePath+"/京东/" + dirName + "/images/" + UUID.randomUUID().toString() + ".jpg";
         downloadImg(inputStream, filePath);
-        return new File(filePath).getAbsolutePath();
+        return new File("files/"+datePath+"/京东/" + dirName ).getAbsolutePath();
     }
 
 
@@ -312,8 +314,8 @@ public class JdFangChanSpiderImpl implements ISpider {
         httpUrl.connect();
         String replace = filename.replaceAll("\\\\", "");
         InputStream inputStream = httpUrl.getInputStream();
-        //将图片保存成files/房产地址/xxx.jpg的形式
-        String filePath = "files/京东/" + dirName + "/attach/" + replace;
+        //将图片保存成files/2020-0211/房产地址/xxx.jpg的形式
+        String filePath = "files/"+datePath+"/京东/" + dirName + "/attach/" + replace;
         downloadImg(inputStream, filePath);
         return new File(filename).getAbsolutePath();
     }

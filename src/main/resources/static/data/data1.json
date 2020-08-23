@@ -1,0 +1,16 @@
+[
+    {
+        "task_id": 0,
+        "task_start_time": "2020-08-11",
+        "task_end_time": "2020-08-02",
+        "task_status": "爬取中",
+        "task_store_path": "/C"
+    },
+    {
+        "task_id": 0,
+        "task_start_time": "2020-08-11",
+        "task_end_time": "2020-08-02",
+        "task_status": "已完成",
+        "task_store_path": "/C"
+    }
+]

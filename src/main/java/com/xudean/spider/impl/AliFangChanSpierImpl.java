@@ -2,6 +2,7 @@ package com.xudean.spider.impl;
 
 import cn.hutool.core.util.StrUtil;
 import com.alibaba.excel.EasyExcel;
+import com.xudean.config.SpiderControlConfig;
 import com.xudean.pojo.HouseItem;
 import com.xudean.spider.ISpider;
 import com.xudean.util.DateUtil;
@@ -27,7 +28,6 @@ import java.util.concurrent.atomic.AtomicInteger;
  * @author xuda
  */
 @Slf4j
-@Component
 public class AliFangChanSpierImpl implements ISpider {
     /**
      * 东莞房产初始URL
@@ -36,23 +36,29 @@ public class AliFangChanSpierImpl implements ISpider {
     private static final String DONG_GUAN_FANGCHAN_URL_INDEX = "https://sf.taobao.com/item_list.htm?spm=a213w.7398504.pagination.2.63f56888yZmS5j&category=50025969&auction_source=0&city=%B6%AB%DD%B8&st_param=-1&auction_start_seg=-1&page=1";
     private List<HouseItem> allHouse;
     private ExecutorService cachedThreadPool;
-    private static CountDownLatch cdl = new CountDownLatch(8);
-    ;
+    //用来保存任务开始的日期，该日期同样作为存储结构的最上级目录
+    private String datePath;
+
     /**
      * 爬取的条数
      */
     private AtomicInteger index = new AtomicInteger(1);
 
-    public AliFangChanSpierImpl() {
+    public AliFangChanSpierImpl(int threadNums,String datePath) {
         this.allHouse = new CopyOnWriteArrayList<>();
-        this.cachedThreadPool = Executors.newFixedThreadPool(8);
+        this.cachedThreadPool = Executors.newFixedThreadPool(threadNums);
+        this.datePath = datePath;
     }
+
 
     @Override
     public void startSpider() throws IOException {
         Integer totalPage = getStartPageAndEndPage();
         log.info("获取到总页数:{}", totalPage);
         for (int i = 1; i <= totalPage; i++) {
+            if(i==2 && SpiderControlConfig.isDebug==true){
+                break;
+            }
             getEveryPageHouseItem(i);
         }
         while (true) {
@@ -68,7 +74,7 @@ public class AliFangChanSpierImpl implements ISpider {
             }
         }
         //保存Excel
-        EasyExcel.write("files/淘宝-东莞住宅用房拍卖-司法拍卖-阿里拍卖_拍卖房产汽车车牌土地海关罚没等.xlsx", HouseItem.class)
+        EasyExcel.write("files/"+this.datePath+"/淘宝-东莞住宅用房拍卖-司法拍卖-阿里拍卖_拍卖房产汽车车牌土地海关罚没等.xlsx", HouseItem.class)
                 .sheet().doWrite(allHouse);
         log.info("保存文件成功！");
         cachedThreadPool.shutdown();
@@ -105,7 +111,6 @@ public class AliFangChanSpierImpl implements ISpider {
                     HouseItem houseItem = getItemDetailInfo(detailItem);
                     allHouse.add(houseItem);
                     log.info("----------已爬取{}条---------------", index.incrementAndGet());
-                    cdl.countDown();
                 }
             });
 
@@ -285,7 +290,7 @@ public class AliFangChanSpierImpl implements ISpider {
         httpUrl.connect();
         InputStream inputStream = httpUrl.getInputStream();
         //将图片保存成files/房产地址/xxx.jpg的形式
-        String filePath = "files/淘宝/" + dirName + "/images/" + UUID.randomUUID().toString() + ".jpg";
+        String filePath = "files/"+datePath+"/淘宝/" + dirName + "/images/" + UUID.randomUUID().toString() + ".jpg";
         downloadImg(inputStream, filePath);
     }
 
@@ -304,7 +309,7 @@ public class AliFangChanSpierImpl implements ISpider {
         String replace = filename.replaceAll("\\\\", "");
         InputStream inputStream = httpUrl.getInputStream();
         //将图片保存成files/房产地址/xxx.jpg的形式
-        String filePath = "files/淘宝/" + dirName + "/attach/" + replace;
+        String filePath = "files/"+datePath+"/淘宝/" + dirName + "/attach/" + replace;
         downloadImg(inputStream, filePath);
         return "./淘宝/" + dirName;
     }
