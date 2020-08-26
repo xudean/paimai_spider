@@ -16,22 +16,21 @@ public class HouseItem {
      */
     @ExcelProperty("评估价格")
     private String appraisalPrice;
-
+    /**
+     * 保证金
+     */
+    @ExcelProperty("保证金")
+    private String ensurePay;
     /**
      * 开拍价格
      */
     @ExcelProperty("开拍价格")
     private String openingPrice;
+
     /**
-     * 开拍时间
+     * 看样时间
      */
-    @ExcelProperty("开拍时间")
-    private String startDate;
-    /**
-     * 处置单位
-     */
-    @ExcelProperty("处置单位")
-    private String court;
+
 
     /**
      * 户型
@@ -44,6 +43,16 @@ public class HouseItem {
      */
     @ExcelProperty("面积")
     private String areaSize;
+    /**
+     * 开拍时间
+     */
+    @ExcelProperty("开拍时间")
+    private String startDate;
+    /**
+     * 处置单位
+     */
+    @ExcelProperty("处置单位")
+    private String court;
 
     /**
      * 首付
@@ -57,11 +66,6 @@ public class HouseItem {
     @ExcelProperty("是否有照片")
     private String hasPhoto;
 
-    /**
-     * 保证金
-     */
-    @ExcelProperty("保证金")
-    private String ensurePay;
 
     /**
      * 产权证号

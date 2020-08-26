@@ -32,8 +32,8 @@ public class AliFangChanSpierImpl implements ISpider {
     /**
      * 东莞房产初始URL
      */
-    private static final String DONG_GUAN_FANGCHAN_URL_PREFIX = "https://sf.taobao.com/item_list.htm?spm=a213w.7398504.pagination.2.63f56888yZmS5j&category=50025969&auction_source=0&city=%B6%AB%DD%B8&st_param=-1&auction_start_seg=-1&page=";
-    private static final String DONG_GUAN_FANGCHAN_URL_INDEX = "https://sf.taobao.com/item_list.htm?spm=a213w.7398504.pagination.2.63f56888yZmS5j&category=50025969&auction_source=0&city=%B6%AB%DD%B8&st_param=-1&auction_start_seg=-1&page=1";
+    private static final String DONG_GUAN_FANGCHAN_URL_PREFIX = "https://sf.taobao.com/item_list.htm?spm=a213w.7398504.filter.85.17746888uuobpt&category=50025969&auction_source=0&city=%B6%AB%DD%B8&sorder=1&st_param=-1&auction_start_seg=-1&page=";
+    private static final String DONG_GUAN_FANGCHAN_URL_INDEX = "https://sf.taobao.com/item_list.htm?spm=a213w.7398504.filter.85.17746888uuobpt&category=50025969&auction_source=0&city=%B6%AB%DD%B8&sorder=1&st_param=-1&auction_start_seg=-1&page=1";
     private List<HouseItem> allHouse;
     private ExecutorService cachedThreadPool;
     //用来保存任务开始的日期，该日期同样作为存储结构的最上级目录
@@ -102,6 +102,7 @@ public class AliFangChanSpierImpl implements ISpider {
         //循环获取每页的商品详情
         for (Map<String, Object> item : items) {
             Object itemUrl = item.get("itemUrl");
+            //
             Document detailItem = Jsoup.connect("https:" + itemUrl).timeout(5000).get();
             //获取每页详情的时候可以交给线程池区爬取
             cachedThreadPool.execute(new Runnable() {
@@ -311,7 +312,7 @@ public class AliFangChanSpierImpl implements ISpider {
         //将图片保存成files/房产地址/xxx.jpg的形式
         String filePath = "files/"+datePath+"/淘宝/" + dirName + "/attach/" + replace;
         downloadImg(inputStream, filePath);
-        return "./淘宝/" + dirName;
+        return new File("./淘宝/" + dirName).getAbsolutePath();
     }
 
 

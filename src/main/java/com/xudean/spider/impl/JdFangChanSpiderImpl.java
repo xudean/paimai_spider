@@ -2,6 +2,7 @@ package com.xudean.spider.impl;
 
 import cn.hutool.core.util.StrUtil;
 import com.alibaba.excel.EasyExcel;
+import com.alibaba.excel.util.StringUtils;
 import com.xudean.config.SpiderControlConfig;
 import com.xudean.pojo.HouseItem;
 import com.xudean.spider.ISpider;
@@ -35,7 +36,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 public class JdFangChanSpiderImpl implements ISpider {
     private static final String DONG_GUAN_JD_INDEX_URL = "https://auction.jd.com/sifa_list.html?childrenCateId=12728";
     //拼接每页的连接
-    private static final String REQ_DATA = "{\"apiType\":2,\"page\":\"%s\",\"pageSize\":40,\"reqSource\":0,\"childrenCateId\":\"12728\",\"provinceId\":19,\"cityId\":1655}";
+    private static final String REQ_DATA = "{\"apiType\":2,\"page\":\"%s\",\"pageSize\":40,\"reqSource\":0,\"childrenCateId\":\"12728\",\"provinceId\":19,\"cityId\":1655,\"paimaiStatus\":\"0\"}";
     private static final String EVERY_PAGE_FORMAT = "https://api.m.jd.com/api?appid=paimai-search-soa&functionId=paimai_unifiedSearch&body=%s&loginType=3";
 
     //拼接获取详情的连接
@@ -49,6 +50,10 @@ public class JdFangChanSpiderImpl implements ISpider {
     //    附件信息下载地址
     private static final String FILE_INFO_BASIC_DATA = "{\"custom\":0,\"paimaiId\":%s,\"source\":0}";
     private static final String FILE_INFO_BASIC_URL = "https://api.m.jd.com/api?appid=paimai&functionId=queryAttachFilesForIntro&body=%s&loginType=3";
+
+    //获取竞拍须知，面积可能存在这里
+    private static final String NOTICE_BASIC_DATA = "{\"albumId\":%s}";
+    private static final String NOTICE_BASIC_URL = "https://api.m.jd.com/api?appid=paimai&functionId=queryAnnouncement&body=%s&loginType=3";
 
 
     private List<HouseItem> allHouse;
@@ -156,23 +161,75 @@ public class JdFangChanSpiderImpl implements ISpider {
         //todo 面积
         //todo 产权证号
 //        https://api.m.jd.com/api?appid=paimai&functionId=queryProductDescription&body={"paimaiId":116364001,"source":0}&loginType=3
+   //*************获取面积***********************
         String areaUrl = getAreaDetailUrl(id);
         Document documentArea = Jsoup.connect(areaUrl)
                 .timeout(5000).get();
+        String albumId = detailMap.get("albumId").toString();
         Elements tr = documentArea.getElementsByTag("tr");
         for (Element element : tr) {
-            String text = element.text();
-            if (text.contains("建筑面积") && text.contains("房产登记")) {
-                String area = StrUtil.subBetween(text, "建筑面积：", "平方米");
-                String no = StrUtil.subBetween(text, "房产登记号：", "号，");
-                houseItem.setAreaSize(area.replace("△ ☆ ※","").replace("☆ ※ ",""));
+            if (element.text().contains("建筑面积") && element.text().contains("房产登记")) {
+                String area = StrUtil.subBetween(element.text(), "建筑面积：", "平方米");
+                String no = StrUtil.subBetween(element.text(), "房产登记号：", "号，");
+                houseItem.setAreaSize(area.replace("△ ☆ ※","").replace("☆ ※ ","").replace("标的物介绍",""));
                 houseItem.setCertificateNo(no);
                 break;
             }
             if (element.text().contains("建筑面积") && element.text().contains("㎡")) {
+                houseItem.setAreaSize(element.text().replace("△ ☆ ※","").replace("☆ ※ ",""));
+            }
+
+            if(element.text().contains("标的物介绍")&&element.text().contains("面积")){
+                houseItem.setAreaSize(element.text().replace("标的物介绍",""));
+            }
+
+            if(element.text().contains("建筑总面积")){
                 houseItem.setAreaSize(element.text());
             }
+
+            if(element.text().contains("面积（平方米）")){
+                houseItem.setAreaSize(element.text());
+            }
+
+            if(element.text().contains("权证情况")){
+                houseItem.setCertificateNo(element.text().replace("权证情况",""));
+            }
+
+
         }
+        //有可能就是详情里的字符串的描述
+        if(StringUtils.isEmpty(houseItem.getAreaSize())){
+            if(documentArea.text().contains("建筑总面积")&&documentArea.text().contains("平方米")){
+                String area = StrUtil.subBetween(documentArea.text(),"建筑总面积", "平方米");
+                houseItem.setAreaSize(area);
+            }
+        }
+
+        Document document1 = null;
+        if(StringUtils.isEmpty(houseItem.getAreaSize())){
+            document1 = Jsoup.connect(getNoticeUrl(albumId)).timeout(5000).get();
+            String area = StrUtil.subBetween(document1.text(),"建筑面积：", "平方米");
+            if(StringUtils.isEmpty(area)){
+                area = StrUtil.subBetween(document1.text(),"建筑面积：", "㎡");
+            }
+            if(StringUtils.isEmpty(area)){
+                area = StrUtil.subBetween(document1.text(),"面积：", "㎡");
+            }
+            houseItem.setAreaSize(area);
+        }
+
+        if(StringUtils.isEmpty(houseItem.getAreaSize())){
+            Elements trTmp = document1.getElementsByTag("tr");
+            for (Element element : trTmp) {
+                if (element.text().contains("建筑面积") && element.text().contains("㎡")) {
+                    houseItem.setAreaSize(element.text().replace("△ ☆ ※", "").replace("☆ ※ ", "").replace("标的物介绍", ""));
+                    break;
+                }
+            }
+        }
+
+        //******************************************获取面积结束********************************
+
 
         //保存图片,图片地址，也可以从上面详情中拿到
         Elements imgEles = documentArea.getElementsByTag("img");
@@ -194,8 +251,7 @@ public class JdFangChanSpiderImpl implements ISpider {
             Object url = detail.get("attachmentAddress");
             Object filename = detail.get("attachmentName");
             if (url != null && filename != null) {
-                String localPath = saveToAttachFile(url.toString(), houseItem.getHouseAddress(), filename.toString());
-                houseItem.setLocalPath(localPath);
+               saveToAttachFile(url.toString(), houseItem.getHouseAddress(), filename.toString());
             }
         }
         allHouse.add(houseItem);
@@ -278,6 +334,21 @@ public class JdFangChanSpiderImpl implements ISpider {
         return String.format(FILE_INFO_BASIC_URL, encodeUrl);
     }
 
+    /**
+     * 获取竞拍须知的URL
+     * @param id
+     * @return
+     * @throws UnsupportedEncodingException
+     */
+    public String getNoticeUrl(String id) throws UnsupportedEncodingException {
+        String detailUrl = String.format(NOTICE_BASIC_DATA, id);
+        String encodeUrl = URLEncoder.encode(detailUrl, Charset.defaultCharset().name());
+        return String.format(NOTICE_BASIC_URL, encodeUrl);
+    }
+
+
+
+
     // 爬取网络的图片到本地
     public String saveToImages(String destUrl, String dirName) throws IOException {
         URL url = new URL(destUrl);
@@ -319,5 +390,8 @@ public class JdFangChanSpiderImpl implements ISpider {
         downloadImg(inputStream, filePath);
         return new File(filename).getAbsolutePath();
     }
+
+
+
 
 }
