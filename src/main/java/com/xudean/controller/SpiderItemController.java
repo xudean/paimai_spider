@@ -8,18 +8,21 @@ import com.xudean.spider.impl.JdFangChanSpiderImpl;
 import com.xudean.util.DateUtil;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import javax.annotation.Resource;
 import java.io.File;
+import java.io.IOException;
 import java.util.Date;
 import java.util.List;
 
 @RestController
-@Slf4j
 public class SpiderItemController {
+    private static final Logger log = LoggerFactory.getLogger(SpiderItemController.class);
     @Resource
     private DbOperator dbOperator;
     private Long taskId;
@@ -47,7 +50,11 @@ public class SpiderItemController {
             @Override
             public void run() {
                 log.info("################阿里爬虫启动############");
-                new AliFangChanSpierImpl(threadNums,datePath).startSpider();
+                try {
+                    new AliFangChanSpierImpl(threadNums,datePath).startSpider();
+                } catch (IOException e) {
+                    log.error(e.getMessage(),e);
+                }
             }
         });
         aliThread.start();
@@ -57,7 +64,11 @@ public class SpiderItemController {
             @Override
             public void run() {
                 log.info("################京东爬虫启动############");
-                new JdFangChanSpiderImpl(threadNums,datePath).startSpider();
+                try {
+                    new JdFangChanSpiderImpl(threadNums,datePath).startSpider();
+                } catch (IOException e) {
+                    log.error(e.getMessage(),e);
+                }
             }
         });
         jdThread.start();

@@ -26,4 +26,44 @@ public class SpiderItem {
     private String taskStatus;
     @JsonProperty("task_store_path")
     private String taskStorePath;
+
+    public Long getTaskId() {
+        return taskId;
+    }
+
+    public void setTaskId(Long taskId) {
+        this.taskId = taskId;
+    }
+
+    public String getTaskStartTime() {
+        return taskStartTime;
+    }
+
+    public void setTaskStartTime(String taskStartTime) {
+        this.taskStartTime = taskStartTime;
+    }
+
+    public String getTaskEndTime() {
+        return taskEndTime;
+    }
+
+    public void setTaskEndTime(String taskEndTime) {
+        this.taskEndTime = taskEndTime;
+    }
+
+    public String getTaskStatus() {
+        return taskStatus;
+    }
+
+    public void setTaskStatus(String taskStatus) {
+        this.taskStatus = taskStatus;
+    }
+
+    public String getTaskStorePath() {
+        return taskStorePath;
+    }
+
+    public void setTaskStorePath(String taskStorePath) {
+        this.taskStorePath = taskStorePath;
+    }
 }

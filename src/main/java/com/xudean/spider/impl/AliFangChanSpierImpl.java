@@ -2,11 +2,15 @@ package com.xudean.spider.impl;
 
 import cn.hutool.core.util.StrUtil;
 import com.alibaba.excel.EasyExcel;
+import com.xudean.SpiderApplication;
 import com.xudean.config.SpiderControlConfig;
+import com.xudean.db.DbOperator;
+import com.xudean.handler.CustomCellWriteHandler;
 import com.xudean.pojo.HouseItem;
 import com.xudean.spider.ISpider;
 import com.xudean.util.DateUtil;
 import com.xudean.util.JSONUtil;
+import com.xudean.util.PathUtils;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.io.FileUtils;
@@ -14,6 +18,8 @@ import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 
@@ -27,8 +33,8 @@ import java.util.concurrent.atomic.AtomicInteger;
 /**
  * @author xuda
  */
-@Slf4j
 public class AliFangChanSpierImpl implements ISpider {
+    private static final Logger log = LoggerFactory.getLogger(AliFangChanSpierImpl.class);
     /**
      * 东莞房产初始URL
      */
@@ -73,9 +79,11 @@ public class AliFangChanSpierImpl implements ISpider {
 
             }
         }
-        //保存Excel
-        EasyExcel.write("files/"+this.datePath+"/淘宝-东莞住宅用房拍卖-司法拍卖-阿里拍卖_拍卖房产汽车车牌土地海关罚没等.xlsx", HouseItem.class)
-                .sheet().doWrite(allHouse);
+        String templateFileName = PathUtils.getTempatePath();
+        EasyExcel.write("files/"+this.datePath+"/淘宝-东莞住宅用房拍卖-司法拍卖-阿里拍卖_拍卖房产汽车车牌土地海关罚没等.xlsx", HouseItem.class).registerWriteHandler(new CustomCellWriteHandler()).withTemplate(templateFileName).sheet().doWrite(allHouse);
+//        //保存Excel
+//        EasyExcel.write("files/"+this.datePath+"/淘宝-东莞住宅用房拍卖-司法拍卖-阿里拍卖_拍卖房产汽车车牌土地海关罚没等.xlsx", HouseItem.class)
+//                .sheet().doWrite(allHouse);
         log.info("保存文件成功！");
         cachedThreadPool.shutdown();
 
@@ -109,7 +117,12 @@ public class AliFangChanSpierImpl implements ISpider {
                 @SneakyThrows
                 @Override
                 public void run() {
-                    HouseItem houseItem = getItemDetailInfo(detailItem);
+                    HouseItem houseItem = null;
+                    try {
+                        houseItem = getItemDetailInfo(detailItem);
+                    } catch (IOException e) {
+                        log.error("获取详情失败:{}",e.getMessage(),e);
+                    }
                     allHouse.add(houseItem);
                     log.info("----------已爬取{}条---------------", index.incrementAndGet());
                 }
@@ -148,9 +161,9 @@ public class AliFangChanSpierImpl implements ISpider {
             String endDataFormat = DateUtil.formatDate(date);
             houseItem.setStartDate(endDataFormat);
         }
-        //处置单位
-        String court = document.select("span[class=unit-txt unit-name item-announcement]").text();
-        houseItem.setCourt(court);
+//        //处置单位
+//        String court = document.select("span[class=unit-txt unit-name item-announcement]").text();
+//        houseItem.setCourt(court);
 
         //户型
 
@@ -161,7 +174,7 @@ public class AliFangChanSpierImpl implements ISpider {
         if (detailTr.size() == 0) {
             String text = dataDetailDocument.text();
             String no = StrUtil.subBetween(text, "【", "】");
-            houseItem.setCertificateNo(no);
+//            houseItem.setCertificateNo(no);
             String area = StrUtil.subBetween(text, "建筑面积：", "平方米");
             if (StrUtil.isEmpty(area)) {
                 area = StrUtil.subBetween(text, "建筑面积：", "㎡");
@@ -175,10 +188,10 @@ public class AliFangChanSpierImpl implements ISpider {
                     String desc = element.text().replace("标的物介绍", "");
                     houseItem.setAreaSize(desc);
                 }
-                if (element.text().contains("权证情况")) {
-                    String no = element.text().replace("产权情况", "");
-                    houseItem.setCertificateNo(no);
-                }
+//                if (element.text().contains("权证情况")) {
+//                    String no = element.text().replace("产权情况", "");
+//                    houseItem.setCertificateNo(no);
+//                }
             }
         }
 //        if()
@@ -230,7 +243,7 @@ public class AliFangChanSpierImpl implements ISpider {
             Object id = fileUrl.get("id");
             String attachUrl = getAttachUrl(dowloadUrl, id.toString());
             String houseFilePath = saveToAttachFile(attachUrl, houseItem.getHouseAddress(), (String) fileUrl.get("title"));
-            houseItem.setLocalPath(houseFilePath);
+            houseItem.setLocalPath("file://"+houseFilePath.replaceAll("\\\\","/").replaceAll("#","").replaceAll("、",""));
         }
 
     }
@@ -312,7 +325,7 @@ public class AliFangChanSpierImpl implements ISpider {
         //将图片保存成files/房产地址/xxx.jpg的形式
         String filePath = "files/"+datePath+"/淘宝/" + dirName + "/attach/" + replace;
         downloadImg(inputStream, filePath);
-        return new File("./淘宝/" + dirName).getAbsolutePath();
+        return new File("files/"+datePath+"/淘宝/" + dirName).getAbsolutePath();
     }
 
 

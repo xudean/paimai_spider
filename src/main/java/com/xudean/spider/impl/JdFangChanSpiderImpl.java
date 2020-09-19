@@ -3,11 +3,14 @@ package com.xudean.spider.impl;
 import cn.hutool.core.util.StrUtil;
 import com.alibaba.excel.EasyExcel;
 import com.alibaba.excel.util.StringUtils;
+import com.xudean.SpiderApplication;
 import com.xudean.config.SpiderControlConfig;
+import com.xudean.handler.CustomCellWriteHandler;
 import com.xudean.pojo.HouseItem;
 import com.xudean.spider.ISpider;
 import com.xudean.util.DateUtil;
 import com.xudean.util.JSONUtil;
+import com.xudean.util.PathUtils;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.io.FileUtils;
@@ -15,6 +18,8 @@ import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
 import java.io.File;
@@ -32,8 +37,10 @@ import java.util.concurrent.atomic.AtomicInteger;
 /**
  * @author xuda
  */
-@Slf4j
+
 public class JdFangChanSpiderImpl implements ISpider {
+
+    private static final Logger log = LoggerFactory.getLogger(JdFangChanSpiderImpl.class);
     private static final String DONG_GUAN_JD_INDEX_URL = "https://auction.jd.com/sifa_list.html?childrenCateId=12728";
     //拼接每页的连接
     private static final String REQ_DATA = "{\"apiType\":2,\"page\":\"%s\",\"pageSize\":40,\"reqSource\":0,\"childrenCateId\":\"12728\",\"provinceId\":19,\"cityId\":1655,\"paimaiStatus\":\"0\"}";
@@ -89,7 +96,11 @@ public class JdFangChanSpiderImpl implements ISpider {
                     @SneakyThrows
                     @Override
                     public void run() {
-                        getHouseDetail(dataMap);
+                        try {
+                            getHouseDetail(dataMap);
+                        } catch (IOException e) {
+                            log.error("获取详情失败:{}",e.getMessage(),e);
+                        }
                         log.info("----------已爬取{}条---------------", index.incrementAndGet());
                     }
                 });
@@ -109,9 +120,11 @@ public class JdFangChanSpiderImpl implements ISpider {
 
             }
         }
+        String templateFileName = PathUtils.getTempatePath();
+        EasyExcel.write("files/"+this.datePath+"/京东-东莞住宅用房拍卖-司法拍卖-阿里拍卖_拍卖房产汽车车牌土地海关罚没等.xlsx", HouseItem.class).registerWriteHandler(new CustomCellWriteHandler()).withTemplate(templateFileName).sheet().doWrite(allHouse);
         //保存Excel
-        EasyExcel.write("files/"+datePath+"/京东-东莞住宅用房拍卖-司法拍卖-阿里拍卖_拍卖房产汽车车牌土地海关罚没等.xlsx", HouseItem.class)
-                .sheet().doWrite(allHouse);
+//        EasyExcel.write("files/"+datePath+"/京东-东莞住宅用房拍卖-司法拍卖-阿里拍卖_拍卖房产汽车车牌土地海关罚没等.xlsx", HouseItem.class)
+//                .sheet().doWrite(allHouse);
         log.info("保存文件成功！");
         cachedThreadPool.shutdown();
 
@@ -139,7 +152,7 @@ public class JdFangChanSpiderImpl implements ISpider {
         houseItem.setStartDate(DateUtil.formatDate(date));
 
         //处置单位
-        houseItem.setCourt(dataMap.get("shopName").toString());
+//        houseItem.setCourt(dataMap.get("shopName").toString());
         //户型-无
         //首付-无
         //保证金
@@ -172,7 +185,7 @@ public class JdFangChanSpiderImpl implements ISpider {
                 String area = StrUtil.subBetween(element.text(), "建筑面积：", "平方米");
                 String no = StrUtil.subBetween(element.text(), "房产登记号：", "号，");
                 houseItem.setAreaSize(area.replace("△ ☆ ※","").replace("☆ ※ ","").replace("标的物介绍",""));
-                houseItem.setCertificateNo(no);
+//                houseItem.setCertificateNo(no);
                 break;
             }
             if (element.text().contains("建筑面积") && element.text().contains("㎡")) {
@@ -191,9 +204,9 @@ public class JdFangChanSpiderImpl implements ISpider {
                 houseItem.setAreaSize(element.text());
             }
 
-            if(element.text().contains("权证情况")){
-                houseItem.setCertificateNo(element.text().replace("权证情况",""));
-            }
+//            if(element.text().contains("权证情况")){
+//                houseItem.setCertificateNo(element.text().replace("权证情况",""));
+//            }
 
 
         }
@@ -236,7 +249,7 @@ public class JdFangChanSpiderImpl implements ISpider {
         for (Element element : imgEles) {
             String imgUri = "https:" + element.attr("src");
             String localPath = saveToImages(imgUri, houseItem.getHouseAddress());
-            houseItem.setLocalPath(localPath);
+            houseItem.setLocalPath("file://"+localPath.replaceAll("\\\\","/").replaceAll("#","").replaceAll("、",""));
             houseItem.setHasPhoto("有");
         }
 //附件地址：https://api.m.jd.com/api?appid=paimai&functionId=queryAttachFilesForIntro&body={"custom":0,"paimaiId":116364001,"source":0}&loginType=3

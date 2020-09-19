@@ -1,10 +1,13 @@
 package com.xudean.db;
 
 import com.fasterxml.jackson.core.type.TypeReference;
+import com.xudean.controller.SpiderItemController;
 import com.xudean.pojo.SpiderItem;
 import com.xudean.util.JSONUtil;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.io.FileUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
 import java.io.File;
@@ -15,9 +18,10 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-@Slf4j
+
 @Component
 public class DbOperator {
+    private static final Logger log = LoggerFactory.getLogger(DbOperator.class);
     public static final String DB_PATH = "db/db.json";
     private Map<Long, SpiderItem> datas = null;
 
