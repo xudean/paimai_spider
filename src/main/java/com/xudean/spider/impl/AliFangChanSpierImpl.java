@@ -148,7 +148,7 @@ public class AliFangChanSpierImpl implements ISpider {
         //获取单位
         Elements unit = document.select("em[class=rmb-unit]");
         String startPay = select.text();
-        houseItem.setOpeningPrice(startPay + unit.text());
+        houseItem.setOpeningPrice(startPay);
 
         //开始时间
         Elements startDateEle = document.select("li[class=J_PItem]");
@@ -210,6 +210,10 @@ public class AliFangChanSpierImpl implements ISpider {
                 String baozheng = replace.replaceAll("保证金", "").replace(":¥", "");
                 houseItem.setEnsurePay(baozheng);
             }
+        }
+        if("0".equals(houseItem.getAppraisalPrice() )||StringUtils.isEmpty(houseItem.getAppraisalPrice())){
+            //如果评估价为null，就用起拍价
+            houseItem.setAppraisalPrice(houseItem.getOpeningPrice());
         }
         //有照片
         houseItem.setHasPhoto("有");

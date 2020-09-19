@@ -171,6 +171,10 @@ public class JdFangChanSpiderImpl implements ISpider {
         Map<String, Object> detailMap = (Map<String, Object>) detailRspMap.get("data");
         //开拍价格
         houseItem.setOpeningPrice(detailMap.get("startPrice").toString());
+        if("0".equals(houseItem.getAppraisalPrice())|| org.springframework.util.StringUtils.isEmpty(houseItem.getAppraisalPrice())){
+            //如果评估价为null，就用起拍价
+            houseItem.setAppraisalPrice(houseItem.getOpeningPrice());
+        }
         //todo 面积
         //todo 产权证号
 //        https://api.m.jd.com/api?appid=paimai&functionId=queryProductDescription&body={"paimaiId":116364001,"source":0}&loginType=3
