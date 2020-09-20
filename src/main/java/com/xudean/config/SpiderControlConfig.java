@@ -6,5 +6,5 @@ public class SpiderControlConfig {
      */
     public static boolean isStart = false;
 
-    public static boolean isDebug = true;
+    public static boolean isDebug = false;
 }
