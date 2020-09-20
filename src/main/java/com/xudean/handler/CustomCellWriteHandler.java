@@ -32,7 +32,6 @@ public class CustomCellWriteHandler extends AbstractCellWriteHandler {
             Hyperlink hyperlink = createHelper.createHyperlink(HyperlinkType.URL);
             hyperlink.setAddress(cell.getStringCellValue());
             cell.setHyperlink(hyperlink);
-            cell.setCellValue("点击打开房产详情");
         }
         if (cell.getColumnIndex() == 11) {
             CreationHelper createHelper = writeSheetHolder.getSheet().getWorkbook().getCreationHelper();

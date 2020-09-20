@@ -134,7 +134,21 @@ public class HouseItem {
         this.startDate = startDate;
     }
 
+    public String getPriceStep() {
+        return priceStep;
+    }
 
+    public void setPriceStep(String priceStep) {
+        this.priceStep = priceStep;
+    }
+
+    public String getSeeDemoTime() {
+        return seeDemoTime;
+    }
+
+    public void setSeeDemoTime(String seeDemoTime) {
+        this.seeDemoTime = seeDemoTime;
+    }
 
     public String getFirstPay() {
         return firstPay;

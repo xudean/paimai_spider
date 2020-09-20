@@ -2,25 +2,23 @@ package com.xudean.spider.impl;
 
 import cn.hutool.core.util.StrUtil;
 import com.alibaba.excel.EasyExcel;
-import com.alibaba.excel.util.StringUtils;
-import com.xudean.SpiderApplication;
 import com.xudean.config.SpiderControlConfig;
 import com.xudean.handler.CustomCellWriteHandler;
 import com.xudean.pojo.HouseItem;
 import com.xudean.spider.ISpider;
 import com.xudean.util.DateUtil;
 import com.xudean.util.JSONUtil;
+import com.xudean.util.MoneyFormatUtils;
 import com.xudean.util.PathUtils;
 import lombok.SneakyThrows;
-import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.io.FileUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.stereotype.Component;
 
 import java.io.File;
 import java.io.IOException;
@@ -31,7 +29,10 @@ import java.net.URL;
 import java.net.URLEncoder;
 import java.nio.charset.Charset;
 import java.util.*;
-import java.util.concurrent.*;
+import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
@@ -143,7 +144,10 @@ public class JdFangChanSpiderImpl implements ISpider {
         houseItem.setHouseAddress(dataMap.get("title").toString());
         log.info("开始爬取【{}】的信息", houseItem.getHouseAddress());
         //评估价
-        houseItem.setAppraisalPrice(dataMap.get("assessmentPriceCN").toString());
+        String assessmentPriceStr = (String)dataMap.get("assessmentPriceStr");
+        if(StringUtils.isNotEmpty(assessmentPriceStr)) {
+            houseItem.setAppraisalPrice(MoneyFormatUtils.convertMoneyStr(assessmentPriceStr));
+        }
 
 
         //开拍时间
@@ -156,7 +160,7 @@ public class JdFangChanSpiderImpl implements ISpider {
         //户型-无
         //首付-无
         //保证金
-        houseItem.setEnsurePay(dataMap.get("ensurePrice").toString());
+        houseItem.setEnsurePay(MoneyFormatUtils.convertMoneyStr(dataMap.get("ensurePrice").toString()));
 
 
         //詳情頁面
@@ -170,11 +174,15 @@ public class JdFangChanSpiderImpl implements ISpider {
         Map<String, Object> detailRspMap = JSONUtil.toMap(body.text());
         Map<String, Object> detailMap = (Map<String, Object>) detailRspMap.get("data");
         //开拍价格
-        houseItem.setOpeningPrice(detailMap.get("startPrice").toString());
+        houseItem.setOpeningPrice(MoneyFormatUtils.convertMoneyStr(detailMap.get("startPrice").toString()));
         if("0".equals(houseItem.getAppraisalPrice())|| org.springframework.util.StringUtils.isEmpty(houseItem.getAppraisalPrice())){
             //如果评估价为null，就用起拍价
             houseItem.setAppraisalPrice(houseItem.getOpeningPrice());
         }
+
+        //增加幅度
+        houseItem.setPriceStep(MoneyFormatUtils.convertMoneyStr(detailMap.get("priceLowerOffset").toString()));
+
         //todo 面积
         //todo 产权证号
 //        https://api.m.jd.com/api?appid=paimai&functionId=queryProductDescription&body={"paimaiId":116364001,"source":0}&loginType=3

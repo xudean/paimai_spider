@@ -196,6 +196,11 @@ public class AliFangChanSpierImpl implements ISpider {
         }
 //        if()
 
+        //看样时间
+        Elements elementsByClass = document.getElementsByClass("reserve-samples");
+        if(elementsByClass.size()==0&&elementsByClass.text().contains("免费预约看样")){
+            houseItem.setSeeDemoTime("需要预约");
+        }
 
         //评估价
         Element paypriceEle = document.getElementById("J_HoverShow");
@@ -210,6 +215,12 @@ public class AliFangChanSpierImpl implements ISpider {
                 String baozheng = replace.replaceAll("保证金", "").replace(":¥", "");
                 houseItem.setEnsurePay(baozheng);
             }
+
+            if (replace.contains("加价幅度")) {
+                String priceStep = replace.replaceAll("加价幅度", "").replace(":¥", "");
+                houseItem.setPriceStep(priceStep);
+            }
+
         }
         if("0".equals(houseItem.getAppraisalPrice() )||StringUtils.isEmpty(houseItem.getAppraisalPrice())){
             //如果评估价为null，就用起拍价
