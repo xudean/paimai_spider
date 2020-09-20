@@ -122,7 +122,7 @@ public class JdFangChanSpiderImpl implements ISpider {
             }
         }
         String templateFileName = PathUtils.getTempatePath();
-        EasyExcel.write("files/"+this.datePath+"/京东-东莞住宅用房拍卖-司法拍卖-阿里拍卖_拍卖房产汽车车牌土地海关罚没等.xlsx", HouseItem.class).registerWriteHandler(new CustomCellWriteHandler()).withTemplate(templateFileName).sheet().doWrite(allHouse);
+        EasyExcel.write("files/"+this.datePath+"/京东-东莞住宅用房拍卖-司法拍卖-京东拍卖_拍卖房产汽车车牌土地海关罚没等.xlsx", HouseItem.class).registerWriteHandler(new CustomCellWriteHandler()).withTemplate(templateFileName).sheet().doWrite(allHouse);
         //保存Excel
 //        EasyExcel.write("files/"+datePath+"/京东-东莞住宅用房拍卖-司法拍卖-阿里拍卖_拍卖房产汽车车牌土地海关罚没等.xlsx", HouseItem.class)
 //                .sheet().doWrite(allHouse);
