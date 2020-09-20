@@ -45,6 +45,8 @@ public class AliFangChanSpierImpl implements ISpider {
     //用来保存任务开始的日期，该日期同样作为存储结构的最上级目录
     private String datePath;
 
+
+
     /**
      * 爬取的条数
      */
@@ -79,8 +81,7 @@ public class AliFangChanSpierImpl implements ISpider {
 
             }
         }
-        String templateFileName = PathUtils.getTempatePath();
-        EasyExcel.write("files/"+this.datePath+"/淘宝-东莞住宅用房拍卖-司法拍卖-阿里拍卖_拍卖房产汽车车牌土地海关罚没等.xlsx", HouseItem.class).registerWriteHandler(new CustomCellWriteHandler()).withTemplate(templateFileName).sheet().doWrite(allHouse);
+        EasyExcel.write("files/"+this.datePath+"/淘宝-东莞住宅用房拍卖-司法拍卖-阿里拍卖_拍卖房产汽车车牌土地海关罚没等.xlsx", HouseItem.class).registerWriteHandler(new CustomCellWriteHandler()).withTemplate(PathUtils.getTempatePath()).sheet().doWrite(allHouse);
 //        //保存Excel
 //        EasyExcel.write("files/"+this.datePath+"/淘宝-东莞住宅用房拍卖-司法拍卖-阿里拍卖_拍卖房产汽车车牌土地海关罚没等.xlsx", HouseItem.class)
 //                .sheet().doWrite(allHouse);

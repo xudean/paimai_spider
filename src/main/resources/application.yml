@@ -12,4 +12,5 @@ spring:
     view:
       prefix: classpath:/   # 定位模板的目录
       suffix: .html     # 给返回的页面添加后缀名
-
+excel:
+  template: classpath:/template/template.xlsx
