@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8"> 
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="css/bootstrap.min.css"> 
+    <link rel="stylesheet" href="css/bootstrap-table.min.css">
+</head>
+<body>
+<div class="container">
+    <div>
+        <label>爬虫线程数: </label><input id="threads" type="text" placeholder="建议不要超过CPU核心数" value="5">
+        <button id="build" class="btn btn-default">启动爬虫</button>
+        <button id="clear" class="btn btn-danger">清空记录</button>
+    </div>
+    <hr>
+    <table id="table"
+           data-toggle="table"
+           data-url="/items"
+           data-show-columns="true"
+           data-search="true"
+           data-show-refresh="true"
+           data-show-toggle="true"
+           data-pagination="true"
+           data-height="500">
+        <thead>
+        <tr>
+            <th data-field="task_id" data-formatter="idFormatter">任务编号</th>
+            <th data-field="task_start_time">开始时间</th>
+            <th data-field="task_end_time">结束时间</th>
+            <th data-field="task_status">任务状态</th>
+            <th data-field="task_store_path">存储路径</th>
+        </tr>
+        </thead>
+    </table>
+</div>
+<script src="js/jquery.min.js"></script>
+<script src="js/bootstrap.min.js"></script>
+<!--<script src="assets/bootstrap2.3/js/bootstrap.min.js"></script>-->
+<script src="js/tableExport.js"></script>
+<script src="js/jquery.base64.js"></script>
+<script src="js/bootstrap-table.js"></script>
+<script src="js/bootstrap-table-export.js"></script>
+<script>
+    $(function () {
+        $('#build').click(build);//.trigger('click');
+        $('#clear').click(clear);//.trigger('click');
+    });
+
+    function clear(){
+        $.ajax({
+            //请求方式
+            type : "GET",
+            //请求地址
+            url : "/clear",
+            //请求成功
+            success : function(result) {
+                location.reload()
+            },
+            //请求失败，包含具体的错误信息
+            error : function(e){
+                console.log(e.status);
+                console.log(e.responseText);
+            }
+        });
+    }
+    function build() {
+        var threads = $("#threads").val();
+        $.ajax({
+            //请求方式
+            type : "GET",
+            //请求地址
+            url : "/start_spider?thread_nums="+threads,
+            //请求成功
+            success : function(result) {
+                alert("爬虫启动成功，请耐心等待完成。如要查询状态，请刷新页面！");
+                location.reload()
+            },
+            //请求失败，包含具体的错误信息
+            error : function(e){
+                console.log(e.status);
+                console.log(e.responseText);
+            }
+        });
+    }
+
+</script>
+</body>
+<iframe  frameborder="0" scrolling="no"></iframe>
+<center><br>当前爬虫只针对[东莞市全市]，版本V3.0</a></center>
+</html>

@@ -11,4 +11,8 @@ public class PathUtils {
     public static String getTempatePath() throws IOException {
         return "template/template.xlsx";
     }
+
+    public static String getPingAnTempatePath() throws IOException {
+        return "files/template/template_pingan.xls";
+    }
 }

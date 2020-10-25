@@ -25,5 +25,15 @@ public class TemplateRunner implements ApplicationRunner {
         ClassPathResource classPathResource = new ClassPathResource("template/template.xlsx");
         InputStream inputStream =classPathResource.getInputStream();
         FileUtils.copyToFile(inputStream,file);
+
+        //复制pingan模板
+        File pingAnFile = new File(PathUtils.getPingAnTempatePath());
+        File parentApingAn = pingAnFile.getParentFile();
+        if(!parentApingAn.exists()){
+            parentApingAn.mkdir();
+        }
+        ClassPathResource classPathResourcePingAn = new ClassPathResource("template/template_pingan.xls");
+        InputStream inputStreamPingAn =classPathResourcePingAn.getInputStream();
+        FileUtils.copyToFile(inputStreamPingAn,pingAnFile);
     }
 }

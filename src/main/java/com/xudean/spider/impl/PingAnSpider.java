@@ -1,7 +1,14 @@
 package com.xudean.spider.impl;
 
+import com.alibaba.excel.EasyExcel;
+import com.xudean.handler.CustomCellWriteHandler;
+import com.xudean.pojo.CaseItem;
+import com.xudean.pojo.HouseItem;
 import com.xudean.spider.ISpider;
+import com.xudean.util.DateUtil;
 import com.xudean.util.JSONUtil;
+import com.xudean.util.PathUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpPost;
 import org.apache.http.entity.StringEntity;
@@ -10,25 +17,29 @@ import org.apache.http.impl.client.HttpClients;
 
 
 import java.io.*;
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
+import java.text.ParseException;
+import java.util.*;
 
 public class PingAnSpider implements ISpider {
     public static Map<String, String> header = new HashMap<>();
 
     private int size;
     private int page;
+    private List<CaseItem> caseItems = new ArrayList<>();
 
     public static void main(String[] args) throws IOException {
-        new PingAnSpider(50, 1, "F7A3781EC81F941493C52413A8802B01").startSpider();
+        Iterator<Map.Entry<String, String>> iterator = header.entrySet().iterator();
+        while (iterator.hasNext()) {
+            Map.Entry<String, String> next = iterator.next();
+            System.out.println(next.getKey()+":"+next.getValue());
+        }
     }
 
-    public PingAnSpider(int size, int page, String token) {
+    public PingAnSpider(int size, int page, String token, String session) {
         this.size = size;
         this.page = page;
         header.put("isaps-token", token);
+//        header.put("isaps-token", token);
     }
 
 
@@ -45,28 +56,91 @@ public class PingAnSpider implements ISpider {
         header.put("Sec-Fetch-Dest", "empty");
         header.put("Sec-Fetch-Mode", "cors");
         header.put("Sec-Fetch-Site", "same-site");
-        header.put("User-Agent", "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/86.0.4240.111 Safari/537.36");
+        header.put("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/86.0.4240.111 Safari/537.36");
     }
 
     @Override
     public void startSpider() throws IOException {
-        Map<String, Object> pageContent = getPageContentList(1);
-        //获取每一页的列表
-        Map<String, Object> data = (Map<String, Object>) pageContent.get("data");
-        List<Map<String, Object>> dataList = (List) data.get("list");
-        for (int i = 0; i < dataList.size(); i++) {
-            Map<String, Object> contentMap = dataList.get(i);
-            String serialno = (String) contentMap.get("serialno");
-            Map<String,Object> detailMap = getPageContentDetail(1,serialno);
-            Map<String, Object> detailData = (Map<String, Object>) detailMap.get("data");
-            Map<String, Object> caseData = (Map<String, Object>) detailData.get("data");
+        for (int index = 1; index <= page; index++) {
+            Map<String, Object> pageContent = getPageContentList(index);
+            //获取每一页的列表
+            Map<String, Object> data = (Map<String, Object>) pageContent.get("data");
+            List<Map<String, Object>> dataList = (List) data.get("list");
+            if (data == null) {
+                throw new IOException("获取数据失败");
+            }
+            for (int i = 0; i < dataList.size(); i++) {
+                CaseItem caseItem = new CaseItem();
+                Map<String, Object> contentMap = dataList.get(i);
+                String serialno = (String) contentMap.get("serialno");
+                caseItem.setSerialno(serialno);
+                String outsourceStartDate = (String) contentMap.get("outsourceStartDate");
+                Date date = null;
+                try {
+                    date = DateUtil.parseDatePingAn(outsourceStartDate);
+                    outsourceStartDate = DateUtil.formatDateInSimpleFormat(date);
+                } catch (ParseException e) {
+                    System.out.println("date format failed");
+                }
+                caseItem.setOutsourceStartDate(outsourceStartDate);
+                String entrustBalance = (String) contentMap.get("entrustBalance");
+                caseItem.setEntrustBalance(entrustBalance);
+                String customerName = (String) contentMap.get("customerName");
+                caseItem.setCustomerName(customerName);
+                String certNo = "11111111";
+                caseItem.setCertNo(certNo);
+                String certId = (String) contentMap.get("certId");
+                caseItem.setCertId(certId);
+                String debtAmount = (String) contentMap.get("debtAmount");
+                caseItem.setDebtamount(debtAmount);
+                String currentOverdueDays = (String) contentMap.get("currentOverdueDays");
+                caseItem.setCurrentOverdueDays(currentOverdueDays);
+                String balance = (String) contentMap.get("balance");
+                caseItem.setBalance(balance);
+                caseItem.setBalance2(balance);
+                String debtinte = (String) contentMap.get("debtinte");
+                caseItem.setDebtinte(debtinte);
+                String debtintefine = (String) contentMap.get("debtintefine");
+                caseItem.setDebtintefine(debtintefine);
+                String collectionResult = (String) contentMap.get("collectionResult");
+                if (collectionResult == null) {
+                    collectionResult = "未失联";
+                }
+                caseItem.setCollectionResult(collectionResult);
+                String telePhone = (String) contentMap.get("telePhone");
+                caseItem.setMobiletelePhone(telePhone);
 
+                Map<String, Object> detailMap = getPageContentDetail(index, serialno);
+                Map<String, Object> detailData = (Map<String, Object>) detailMap.get("data");
+                String outsourceEndDate = DateUtil.formatDateInSimpleFormat(DateUtil.dateAddDay(date, 90));
+                caseItem.setOutsourceEndDate(outsourceEndDate);
+                if (detailData == null) {
+                    caseItems.add(caseItem);
+                    System.out.println("have get size :" + caseItems.size() + "");
+                    continue;
+                }
+                Map<String, Object> caseData = (Map<String, Object>) detailData.get("data");
+                String workAdd = (String) caseData.get("workAdd");
+                caseItem.setWorkAdd(workAdd);
+                String familyAdd = (String) caseData.get("familyAdd");
+                caseItem.setFamilyAdd(familyAdd);
+                String age = (String) caseData.get("age");
+                caseItem.setAge(age);
+
+                String putoutTime = (String) caseData.get("putoutTime");
+                caseItem.setPutoutTime(putoutTime);
+                caseItems.add(caseItem);
+                System.out.println("have get size :" + caseItems.size() + "");
+                System.out.println(caseItem.toString());
+//                try {
+//                    Thread.sleep(2000);
+//                } catch (InterruptedException e) {
+//                    System.out.println("sleep failed!");
+//                }
+            }
         }
-        System.out.println(pageContent);
-//        for(int i=1;i<=page;i++){
-//            Map<String, Object> pageContent = getPageContent(i);
-//
-//        }
+        System.out.println(caseItems.size());
+        EasyExcel.write("files/案件导入模板-标准案件模板.xls", CaseItem.class).withTemplate(PathUtils.getPingAnTempatePath()).sheet().doWrite(caseItems);
     }
 
 
@@ -89,6 +163,7 @@ public class PingAnSpider implements ISpider {
         while ((str = reader.readLine()) != null) {
             sb.append(str);
         }
+//        response.close();
         return JSONUtil.toMap(sb.toString());
     }
 
@@ -110,6 +185,7 @@ public class PingAnSpider implements ISpider {
         while ((str = reader.readLine()) != null) {
             sb.append(str);
         }
+//        response.close();
         return JSONUtil.toMap(sb.toString());
     }
 

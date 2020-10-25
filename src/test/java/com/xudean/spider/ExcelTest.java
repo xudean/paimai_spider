@@ -10,9 +10,11 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class ExcelTest {
+    private String test = "";
     public static void main(String[] args) {
         NumberFormat nf = new DecimalFormat("#,###.####");
         Double d = 147000.1;
         String str = nf.format(d);
+        System.out.println(test);
     }
 }

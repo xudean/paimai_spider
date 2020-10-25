@@ -31,6 +31,8 @@ public class DateUtil {
      * yyyy-MM-dd
      */
     private static final String SIMPLE_DATE_FORMAT_STR = "yyyy-MM-dd";
+    private static final String SIMPLE_DATE_FORMAT_STR_PINGAN = "yyyy/MM/dd";
+
 
     public static String formatDate(Date date) {
         return new SimpleDateFormat(FULL_DATE_FORMATE_STR).format(date);
@@ -40,6 +42,15 @@ public class DateUtil {
         return new SimpleDateFormat(SIMPLE_DATE_FORMAT_STR).format(date);
     }
 
+    public static Date parseDatePingAn(String dateStr) throws ParseException {
+        Date date = null;
+        try {
+            date = new SimpleDateFormat(SIMPLE_DATE_FORMAT_STR_PINGAN).parse(dateStr);
+        } catch (ParseException e) {
+            log.error(e.getMessage(),e);
+        }
+        return date;
+    }
 
     public static Date parseDate(String dateStr) throws ParseException {
         Date date = null;
