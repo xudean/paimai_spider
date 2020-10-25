@@ -1,0 +1,42 @@
+{
+    "returnStatus": "S",
+    "returnCode": "000000",
+    "errorSeqNo": null,
+    "returnMessage": "交易成功",
+    "data": {
+        "rspCode": "0",
+        "msg": "接口交易成功",
+        "data": {
+            "customerName": "李娟",
+            "sex": "女性",
+            "certType": "身份证",
+            "certId": "432503198410298044",
+            "age": "35",
+            "familyAdd": "广东东莞市常平镇大京九塑胶原料市场京九大道I46号",
+            "workAdd": "广东东莞市常平镇大京九塑胶原料市场京九大道I46号",
+            "mobiletelePhone": "13829105868",
+            "competentCourt": "东莞市第一人民法院",
+            "isDisappeared": "未失联",
+            "companyType": null,
+            "companyScope": null,
+            "logonAddress": null,
+            "logonCapital": "0",
+            "workAddress": null,
+            "professionType": null,
+            "manageScope": null,
+            "majorProduce": null,
+            "annualSalesVolume": "0",
+            "entrustBalance": "666110.24",
+            "branchId": "WCN2020102100019041",
+            "entrustTime": "2020/10/21",
+            "currentOverdueDays": "647",
+            "balance": "482298.47",
+            "debtamount": "482298.47",
+            "debtinte": "159843.89",
+            "debtintefine": "25241.56",
+            "putoutTime": "2018/04/03",
+            "customerTypeFlag": "1"
+        },
+        "retryCode": null
+    }
+}
