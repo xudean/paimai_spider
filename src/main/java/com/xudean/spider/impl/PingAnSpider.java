@@ -147,8 +147,8 @@ public class PingAnSpider implements ISpider {
     public Map<String, Object> getPageContentList(int page) throws IOException {
         CloseableHttpClient client = HttpClients.createDefault();
         HttpPost httpPost = new HttpPost("https://bfiles.pingan.com.cn/brcp/stp/openapi/servgw/servicegateway/casedeal/selectCaseList");
-
-        String json = String.format("{\"size\":50,\"page\":\"%d\"}", page);
+//        https://bfiles.pingan.com.cn/brcp/stp/openapi/servgw/servicegateway/casedeal/selectCaseList
+        String json = String.format("{\"isfocus\":\"\",\"islawcase\":2,\"size\":50,\"page\":\"%d\"}", page);
         StringEntity entity = new StringEntity(json);
         httpPost.setEntity(entity);
         Iterator<Map.Entry<String, String>> iterator = header.entrySet().iterator();
